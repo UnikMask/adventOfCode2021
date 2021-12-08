@@ -88,23 +88,7 @@ func removeFromInput(input []digit, number int) []digit {
 	return input
 }
 
-func contains(a string, b string) bool {
-	for _, char := range b {
-		contains := false
-		for _, oChar := range a {
-			if char == oChar {
-				contains = true
-				break
-			}
-		}
-		if !contains {
-			return false
-		}
-	}
-	return true
-}
-
-func isRearrangement(a string, b string) bool {
+func contains(a string, b string, rearrangement bool) bool {
 	for _, char := range b {
 		contains := false
 		for _, oChar := range a {
@@ -118,67 +102,72 @@ func isRearrangement(a string, b string) bool {
 			return false
 		}
 	}
-	return a == ""
+	return !rearrangement || a == ""
+}
+
+func isRearrangement(a string, b string) bool {
+	return contains(a, b, true)
+}
+
+func setActivations(input []digit, digitFunc func(digit) bool) {
+	for _, digit := range input {
+		if digitFunc(digit) {
+			return
+		}
+	}
 }
 
 func findActivationMapping(input []digit) map[byte]byte {
 	activations := make(map[byte]byte)
 	possibilities := make(map[string][]byte)
+	input_t := make([]digit, len(input))
+	copy(input_t, input)
 
 	// 1. Get one and seven, find a, and cf candidates.
-	one, seven := input[find(input, 1)], input[find(input, 7)]
+	one, seven := input_t[find(input_t, 1)], input_t[find(input_t, 7)]
 	activations['a'] = removeFromString(seven.pts, one.pts)[0]
 	possibilities["cf"] = []byte{one.pts[0], one.pts[1]}
 
 	// 2. Get bd candidates from one and four.
-	four := input[find(input, 4)]
+	four := input_t[find(input_t, 4)]
 	dbStr := removeFromString(four.pts, one.pts)
 	possibilities["db"] = []byte{dbStr[0], dbStr[1]}
 
 	// 2.5. Remove 8, 1, 7, and 4 from input
-	input = removeFromInput(input, 8)
-	input = removeFromInput(input, 1)
-	input = removeFromInput(input, 7)
-	input = removeFromInput(input, 4)
+	input_t = removeFromInput(input_t, 8)
+	input_t = removeFromInput(input_t, 1)
+	input_t = removeFromInput(input_t, 7)
+	input_t = removeFromInput(input_t, 4)
 
 	// 3. Find 5 as of length 5 and containing a, b, c or f, d, g.
 	// Get c, f, g.
 	remArr := [][]byte{append([]byte{activations['a'], possibilities["cf"][0]}, possibilities["db"]...),
 		append([]byte{activations['a'], possibilities["cf"][1]}, possibilities["db"]...)}
-	for _, digit := range input {
-		done := false
+	setActivations(input_t, (func(digit digit) bool {
 		for i := range remArr {
-			if (len(digit.pts) == 5) && contains(digit.pts, string(remArr[i][:])) {
+			if (len(digit.pts) == 5) && contains(digit.pts, string(remArr[i][:]), false) {
 				activations['g'] = removeFromString(digit.pts, string(remArr[i][:]))[0]
 				activations['f'] = remArr[i%2][1]
 				activations['c'] = remArr[(i+1)%2][1]
-				done = true
-				break
+				return true
 			}
 		}
-		if done {
-			break
-		}
-	}
+		return false
+	}))
 
 	// 4. Find 3 as of length 5 and containing a, c, d, f, g.
-	remArr = [][]byte{
-		{possibilities["db"][0], activations['a'], activations['c'], activations['f'], activations['g']},
+	remArr = [][]byte{{possibilities["db"][0], activations['a'], activations['c'], activations['f'], activations['g']},
 		{possibilities["db"][1], activations['a'], activations['c'], activations['f'], activations['g']}}
-	for _, digit := range input {
-		done := false
+	setActivations(input_t, (func(digit digit) bool {
 		for i := range remArr {
-			if len(digit.pts) == 5 && contains(digit.pts, string(remArr[i][:])) {
+			if len(digit.pts) == 5 && contains(digit.pts, string(remArr[i][:]), false) {
 				activations['d'] = remArr[i%2][0]
 				activations['b'] = remArr[(i+1)%2][0]
-				done = true
-				break
+				return true
 			}
 		}
-		if done {
-			break
-		}
-	}
+		return false
+	}))
 
 	// 5. Get last remaining digit
 	actArr := []byte{}
@@ -221,7 +210,7 @@ func getOutputVal(board digitIo) int {
 }
 
 func main() {
-	boardIoData := getData("part1.data")
+	boardIoData := getData("part2.data")
 
 	uniqueNumsSum := 0
 	for _, ioRow := range boardIoData {
