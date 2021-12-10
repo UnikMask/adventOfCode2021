@@ -44,34 +44,29 @@ func main() {
 	scanner := bufio.NewScanner(f)
 	syntaxScore := 0
 	completions := []int{}
+file:
 	for scanner.Scan() {
 		errorStack := stack{}
-		errored := true
+	line:
 		for _, char := range scanner.Text() {
-			errored = true
-			possibilities := append(chunkOpens, errorStack.pop())
-			for _, i := range possibilities {
+			pop := errorStack.pop()
+			for _, i := range append(chunkOpens, pop) {
 				if char == i {
-					if i != possibilities[len(possibilities)-1] {
-						errorStack.push(possibilities[len(possibilities)-1])
+					if i != pop {
+						errorStack.push(pop)
 						errorStack.push(chunkCloses[i])
 					}
-					errored = false
-					break
+					continue line
 				}
 			}
-			if errored {
-				syntaxScore += scoreMap[char]
-				break
-			}
+			syntaxScore += scoreMap[char]
+			continue file
 		}
-		if !errored {
-			lineCompletion := 0
-			for next := errorStack.pop(); next != '\n'; next = errorStack.pop() {
-				lineCompletion = lineCompletion*5 + completionMap[next]
-			}
-			completions = append(completions, lineCompletion)
+		lineCompletion := 0
+		for next := errorStack.pop(); next != '\n'; next = errorStack.pop() {
+			lineCompletion = lineCompletion*5 + completionMap[next]
 		}
+		completions = append(completions, lineCompletion)
 	}
 	fmt.Printf("Syntax Error Score: %d\n", syntaxScore)
 
