@@ -39,13 +39,6 @@ func (s *stack) pop() rune {
 	}
 }
 
-func (s *stack) get() rune {
-	if s.first == nil {
-		return '\n'
-	}
-	return s.first.char
-}
-
 func main() {
 	f, _ := os.Open("part1.data")
 	scanner := bufio.NewScanner(f)
@@ -56,12 +49,11 @@ func main() {
 		errored := true
 		for _, char := range scanner.Text() {
 			errored = true
-			possibilities := append(chunkOpens, errorStack.get())
+			possibilities := append(chunkOpens, errorStack.pop())
 			for _, i := range possibilities {
 				if char == i {
-					if i == errorStack.get() {
-						errorStack.pop()
-					} else {
+					if i != possibilities[len(possibilities)-1] {
+						errorStack.push(possibilities[len(possibilities)-1])
 						errorStack.push(chunkCloses[i])
 					}
 					errored = false
@@ -81,10 +73,8 @@ func main() {
 			completions = append(completions, lineCompletion)
 		}
 	}
-
 	fmt.Printf("Syntax Error Score: %d\n", syntaxScore)
 
 	sort.Ints(completions)
 	fmt.Printf("Completion Score: %d\n", completions[len(completions)/2])
-
 }
